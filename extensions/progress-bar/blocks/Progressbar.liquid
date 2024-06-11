@@ -1,0 +1,236 @@
+{% comment %} ------------ Calcul's Variables ----- {% endcomment %}
+
+{% assign cart_total_price = cart.total_price | divided_by: 100  %}
+{% assign free_shipping_number = block.settings.shippingnumber | times: 1.00 %}
+{% assign free_shipping_purcent = cart_total_price | divided_by: free_shipping_number | times: 100.00 %}
+{% assign shipping_left = free_shipping_number | minus: cart_total_price |  times: 100 | money %}
+
+{% comment %} ------------ Personalisation's Variables ----- {% endcomment %}
+
+{% assign background_bar_color = block.settings.background_bar_color %}
+{% assign bar_color = block.settings.bar_color %}
+
+{% assign center_bar = block.settings.center_bar %}
+{% assign bar_width = block.settings.bar_width %} 
+
+{% assign text_color = block.settings.text_color %}
+{% assign font_size = block.settings.font_size %}
+
+
+{% comment %} ------------ HTML ----- {% endcomment %}
+
+
+<div class="shipping-progress-bar"> 
+    <h4>SHIPPING BAR</h4>
+    <span id="cartData"></span>
+    <div class="bar" style="width: {{ bar_width }}%; margin: {%- if center_bar -%}
+        auto;
+        {%- else -%}
+        0;
+    {%- endif -%};">
+        <div class="progress" style="width:{{ free_shipping_purcent 
+    | round }}%;"></div>
+    </div>
+
+    <div class="cart-total">
+        <p>Total du panier: {{ cart.total_price | money }}</p>
+        {% if free_shipping_purcent >= 100 %}
+            <p>Vous avez la livraison gratuite</p>
+        {% else %}
+            <p>Il vous manque {{ shipping_left }} pour avoir la livraison gratuite</p>
+        {% endif %}
+    </div>
+</div>
+
+{% comment %} ------------ CSS ----- {% endcomment %}
+
+<style>
+    .bar {
+        height: 30px;
+        background-color: {{ background_bar_color }};
+        border-radius: 25px;
+        position: relative;
+    }
+
+    .shipping-progress-bar p{
+        font-size: {{ font_size }}rem;
+        color: {{ text_color }};
+    }
+
+    .progress {
+        height: 80%;
+        border-radius: 14px;
+        background-color: {{ bar_color }};
+        display: block!important;
+        transform: translate(3px, 3px);
+        position: absolute;
+    }
+
+    .progress::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        {%- if block.settings.animated_bar -%}
+            background: linear-gradient(90deg, transparent 49%, rgba(0, 0, 0, 0.1) 50%);
+            background-size: 1rem 1rem;
+            animation: move 2s linear infinite;
+        {%- endif -%}
+        border-radius: 14px;
+    }
+
+    .progress::after{
+        content: "{{ free_shipping_purcent | round }}%";
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        text-align: right;
+        padding-right: 10px;
+        padding-left: 10px;
+        line-height: 24px;
+        font-weight: 500;
+        color: #ffffffd4;
+        z-index: 2;
+    }
+
+    @keyframes move {
+        100% {
+            background-position: 1rem 0rem;
+        }
+    }
+
+    .cart-total {
+        margin-top: 10px;
+    }
+</style>
+
+{% comment %} ------------ JS ----- {% endcomment %}
+
+<script>
+
+
+    document.addEventListener('DOMContentLoaded', function() {
+        // Sélectionnez tous les formulaires d'ajout au panier
+        const addToCartForms = document.querySelectorAll('form[action="/cart/add"]');
+        const cartElement = document.getElementById('cartData');
+
+        function fetchCartData() {
+            let cartContents = fetch(window.Shopify.routes.root + 'cart.js')
+                .then(response => response.json())
+                .then(data => { 
+                  
+                    if(cartElement) {
+                        
+                        cartElement.textContent = data.item_count + ' items in cart';
+                    }
+                    return data;
+                });
+
+                console.log(cartContents);
+        }
+
+        fetchCartData();
+
+        // If the cart is updated, fetch the cart data again
+
+        addToCartForms.forEach(form => {
+            form.addEventListener('submit', function() {
+                console.log('cart updated');
+
+            });
+        });
+    });
+</script>
+
+{% comment %} ------------ Schema ----- {% endcomment %}
+
+{% schema %}
+{
+  "name": "Progress Bar", 
+  "target": "section",
+  "settings": [
+    {
+        "type": "header",
+        "content": "-------- Shipping Settings --------"
+    },
+    {
+        "type" : "text",
+        "id" : "shipping_title",
+        "label" : "Shipping Title",
+        "default" : "Free Shipping progress bar"
+    },
+    {
+        "type" : "number",
+        "id" : "shippingnumber",
+        "label" : "Free Shipping Number",
+        "default" : 100
+    },
+    {
+        "type": "header",
+        "content": "-------- Bar Settings --------"
+    },
+    {
+      "type": "color",
+      "id": "bar_color",
+      "label": "Bar Color",
+      "default": "#ff0000"
+    },
+    {
+      "type": "color",
+      "id": "background_bar_color",
+      "label": "background Bar Color",
+      "default": "#D9D9D9"
+    },
+    
+    {
+        "type": "text",
+        "id": "bar_width",
+        "label": "bar width",
+        "default": "100",
+        "info": "The number is in %. Enter a number between 0 and 100"
+    },
+    {
+        "type": "checkbox",
+        "id": "animated_bar",
+        "label": "Animated Bar",
+        "default": false
+    },
+    {
+        "type": "checkbox",
+        "id": "center_bar",
+        "label": "Center Bar",
+        "default": false
+    },
+    {
+        "type": "header",
+        "content": "-------- Text Settings ---------"
+    },
+    {
+        "type": "text",
+        "id": "custom_text",
+        "label": "Custom Text",
+        "default": "il vous manque pour la livraison gratuite"
+    },
+    {
+        "type": "color",
+        "id": "text_color",
+        "label": "Text Color",
+        "default": "#000000"
+    },
+    {
+        "type": "range",
+        "id": "font_size",
+        "label": "Font size",
+        "min": 0.7,
+        "step": 0.1,
+        "max": 2,
+        "unit": "rem",
+        "default": 1.5
+    }
+  ]
+}
+{% endschema %}
